@@ -1,26 +1,27 @@
 import jax.numpy as jnp
 
 class ClassicalController:
-    def __init__(self, k_p, k_i, k_d):
-        self.k_p = jnp.array(k_p)
-        self.k_i = jnp.array(k_i)
-        self.k_d = jnp.array(k_d)
-        self.error_history = jnp.array([]) 
+    def __init__(self, gains):
+        self.gains = jnp.array(gains)  # [K_p, K_i, K_d]
+        # Might want to switch to fixed size list if its slow
+        self._error_history = jnp.array([]) 
 
-    def calc_proportional(self):
-        return self.k_p * self.error_history[-1] if self.error_history.size > 0 else jnp.array(0.0)
+    def _calc_proportional(self):
+        return self.gains[0] * ( self._error_history[-1] if self._error_history.size > 0 else jnp.array(0.0) )
 
-    def calc_integral(self):
-        return self.k_i * jnp.sum(self.error_history) if self.error_history.size > 0 else jnp.array(0.0)
+    def _calc_integral(self):
+        return self.gains[1] * ( jnp.sum(self._error_history) if self._error_history.size > 0 else jnp.array(0.0) )
 
-    def calc_derivative(self):
-        if self.error_history.size < 2:
+    def _calc_derivative(self):
+        if self._error_history.size < 2:
             return jnp.array(0.0)
-        return self.k_d * (self.error_history[-1] - self.error_history[-2])
+        return self.gains[2] * (self._error_history[-1] - self._error_history[-2])
 
     def get_control_signal(self):
-        return self.calc_proportional() + self.calc_integral() + self.calc_derivative()
+        return self._calc_proportional() + self._calc_integral() + self._calc_derivative()
 
-    def step(self, error):
-        self.error_history = jnp.concatenate([self.error_history, jnp.array([error])])
-        return self.get_control_signal()    
+    # Returns control signal Y
+    def step(self, error_history, error):
+        # jax follows the functional paragim 
+        self._error_history = jnp.concatenate([error_history, jnp.array([error])])
+        return self._error_history, self.get_control_signal()

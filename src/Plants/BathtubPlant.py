@@ -1,5 +1,5 @@
 import jax.numpy as jnp
-
+ 
 class BathtubPlant:
     """
         This is a simulation of a bathtub and its water height.
@@ -19,7 +19,7 @@ class BathtubPlant:
         - A: Cross-section of area of the bathtub m^2
         - C: Cross-section of area of the drain m^2
 
-        Varying parameters for this class:
+        Variables for this class:
         - H: Water height m
         - U: Input flow rate m^3 / s
         - D: Disturbance to input flow rate m^3 / s
@@ -27,43 +27,12 @@ class BathtubPlant:
         # For autograd all the variables need to be in jnp format.
     """
     
-    def __init__(self, H_0: float, A: float, C: float) -> None:
-        """
-        Initializes the BathtubPlant model.
-
-        Parameters:
-        - H_0: Initial water height
-        - A: Cross-section of area of the bathtub
-        - C: Cross-section of area of the drain
-        """
-        self.H = jnp.array(H_0)
+    def __init__(self, A: float, C: float) -> None:
         self.A = jnp.array(A)
         self.C = jnp.array(C)
 
-    def iterate(self, U: float, D: float) -> jnp.ndarray:
-        """
-        Updates the water height based on control input U and disturbance D.
-
-        Parameters:
-        - U: Controller water input.
-        - D: External disturbance.
-
-        Returns:
-        - Updated water height
-        """
-        self.H = jnp.maximum(0, self.H + self.get_height_delta(U, D))
-        return self.H
-    
-    def get_height_delta(self, U: float, D: float) -> jnp.ndarray:
-        """
-        Computes the change in water height over one timestep.
-
-        Parameters:
-        - U: Controller input
-        - D: Disturbance input
-
-        Returns:
-        - Change in water height (meters)
-        """
-        vc = jnp.sqrt(19.6 * self.H) * self.C  # JAX-compatible sqrt()
-        return (U + D - vc) / self.A
+    # returns new height
+    def step(self, H, U: float, D: float) -> jnp.ndarray:
+        vc = jnp.sqrt(19.6 * H) * self.C
+        d_h = (U + D - vc) / self.A
+        return jnp.maximum(0, H + d_h)

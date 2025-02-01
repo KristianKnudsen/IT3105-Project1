@@ -1,16 +1,14 @@
 from BathtubPlant import BathtubPlant
 import random as rd
 
-U = 0.04
+# Define initial conditions
+U = 0.04  # Initial control input
+H = 0.5   # Initial water height
 
-H = 0.5
+a = 0.15
+c = a/100
 
-def getD(min=-0.01, max=0.01):
-    return rd.uniform(-0.01, 0.01)
+bp = BathtubPlant(H, a, c)
 
-bp = BathtubPlant(H_0=H, A=1.5, C=0.015)
-
-epochs = 10
-for _ in range(epochs):
-    bp.iterate(U=U, D=getD())
-    print(bp.H)
+for _ in range(10):
+    print(bp.step(U=0.0047, D=0))
