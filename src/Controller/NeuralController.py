@@ -1,17 +1,30 @@
+# NeuralController.py
 import jax
 import jax.numpy as jnp
-import jax.random as jr
 
 class NeuralController:
-    def __init__(self, rng, hidden_size=16):
+    def __init__(self, param_array, hidden_size=16):
         self._error_history = jnp.array([])
-        k1, k2, k3, k4 = jr.split(rng, 4)
-        self.params = {
-            "W1": jr.normal(k1, (3, hidden_size)) * 0.1,
-            "b1": jr.normal(k2, (hidden_size,)) * 0.1,
-            "W2": jr.normal(k3, (hidden_size, 1)) * 0.1,
-            "b2": jr.normal(k4, (1,)) * 0.1
-        }
+        self.hidden_size = hidden_size
+        self.params = param_array  # flattened array of NN parameters
+
+    def _unpack_params(self):
+        # Unpack the 1D param_array into W1, b1, W2, b2
+        input_dim = 3
+        output_dim = 1
+        size_W1 = input_dim * self.hidden_size
+        size_b1 = self.hidden_size
+        size_W2 = self.hidden_size * output_dim
+        size_b2 = output_dim
+        offset = 0
+        W1 = self.params[offset : offset + size_W1].reshape((input_dim, self.hidden_size))
+        offset += size_W1
+        b1 = self.params[offset : offset + size_b1]
+        offset += size_b1
+        W2 = self.params[offset : offset + size_W2].reshape((self.hidden_size, output_dim))
+        offset += size_W2
+        b2 = self.params[offset : offset + size_b2]
+        return W1, b1, W2, b2
 
     def _calc_proportional(self):
         return self._error_history[-1] if self._error_history.size > 0 else 0.0
@@ -24,18 +37,15 @@ class NeuralController:
             return 0.0
         return self._error_history[-1] - self._error_history[-2]
 
-    def _forward(self, p, i, d):
-        x = jnp.array([p, i, d])
-        x = x @ self.params["W1"] + self.params["b1"]
-        x = jax.nn.relu(x)
-        x = x @ self.params["W2"] + self.params["b2"]
-        return x[0]
-
     def get_control_signal(self):
+        W1, b1, W2, b2 = self._unpack_params()
         p = self._calc_proportional()
         i = self._calc_integral()
         d = self._calc_derivative()
-        return self._forward(p, i, d)
+        x = jnp.array([p, i, d])
+        x = jax.nn.relu(x @ W1 + b1)
+        x = x @ W2 + b2
+        return x[0]
 
     def step(self, error_history, error):
         self._error_history = jnp.concatenate([error_history, jnp.array([error])])
