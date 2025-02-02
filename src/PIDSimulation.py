@@ -1,54 +1,87 @@
-# PIDSimulation.py
-from Controller.NeuralController import NeuralController
+from Controller.ClassicalController import ClassicalController
 from Plants.BathtubPlant import BathtubPlant
 import jax
 import jax.numpy as jnp
 import jax.random as jr
 
 class PIDSimulation:
-    def __init__(self, net_params, plant, setpoint=0.5, time_steps=100, seed=0, hidden_size=16):
-        self.controller = NeuralController(net_params, hidden_size)
+    def __init__(self, gains, plant, setpoint=0.5, time_steps=100, seed=0):
+        """
+        Initializes the simulation with:
+          gains: PID gains [K_p, K_i, K_d]
+          plant: an instance of BathtubPlant
+          setpoint: the target water height
+          time_steps: how many steps to simulate
+          seed: PRNG seed for reproducibility
+        """
+        if jnp.isnan(gains).any():
+            jax.debug.print("NaN detected in PID gains BEFORE passing to ClassicalController: {gains}", gains=gains)
+        jax.debug.print("1")
+        self.controller = ClassicalController(gains)  # create once here
         self.plant = plant
         self.setpoint = jnp.array(setpoint)
         self.time_steps = time_steps
-        self.key = jr.PRNGKey(seed)
+        self.key = jr.PRNGKey(seed)  # JAX PRNG for reproducibility
 
     def simulate(self):
+        """
+        Runs the simulation for `self.time_steps`.
+        Returns:
+          - error_history (jnp array of shape [time_steps])
+          - final water height H
+          - mse_loss (mean of squared errors)
+        """
         error_history = jnp.array([])
-        H = jnp.array(0.5)
+        H = jnp.array(0.5)  # Initial water height
+
         for _ in range(self.time_steps):
+
             error = self.setpoint - H
             error_history, U = self.controller.step(error_history, error)
-            self.key, subkey = jr.split(self.key)
+            jax.debug.print("3: {K_p}", K_p=U)
+            jax.debug.print("g: {K_p}", K_p=self.controller.gains)
+
+            # Random disturbance
+            self.key, subkey = jr.split(self.key)  # Update PRNG key
             D = jr.uniform(subkey, shape=(), minval=-0.01, maxval=0.01)
+
             H = self.plant.step(H, U, D)
+
         mse_loss = jnp.mean(error_history**2)
         return error_history, H, mse_loss
 
-def loss_fn(net_params):
+def loss_fn(gains):
+    """
+    Given PID gains, run the simulation and return the MSE loss.
+    We'll differentiate this w.r.t. 'gains'.
+    """
     plant = BathtubPlant(A=0.15, C=0.15/100)
-    sim = PIDSimulation(net_params, plant, setpoint=0.5, time_steps=100, seed=42, hidden_size=16)
+    sim = PIDSimulation(gains, plant, setpoint=0.5, time_steps=10, seed=42)
     _, _, mse_loss = sim.simulate()
     return mse_loss
 
-def init_net_params(rng, input_dim=3, hidden_size=16, output_dim=1):
-    W1 = jax.random.normal(rng, (input_dim, hidden_size)) * 0.1
-    b1 = jax.random.normal(rng, (hidden_size,)) * 0.1
-    W2 = jax.random.normal(rng, (hidden_size, output_dim)) * 0.1
-    b2 = jax.random.normal(rng, (output_dim,)) * 0.1
-    return jnp.concatenate([W1.ravel(), b1.ravel(), W2.ravel(), b2.ravel()])
-
 if __name__ == "__main__":
-    rng = jr.PRNGKey(0)
-    net_params = init_net_params(rng, input_dim=3, hidden_size=16, output_dim=1)
-    learning_rate = 0.01
-    num_iterations = 100
-    grad_fn = jax.grad(loss_fn)
+    # Hyperparameters
+    learning_rate = 0.001  # Step size for gradient descent
+    num_iterations = 1  # Number of optimization steps
+
+    # Initialize PID gains
+    gains = jnp.array([0.5, 0., 0.])
+
+    print(f"Initial gains: {gains}")
+
+    value_and_grad_fn = jax.value_and_grad(loss_fn)
 
     for i in range(num_iterations):
-        grads = grad_fn(net_params)
-        net_params -= learning_rate * grads
-        if i % 10 == 0:
-            l = loss_fn(net_params)
-            print(i, l, net_params[:5])
-    print("Final loss:", loss_fn(net_params))
+        # This single call returns both loss and gradients 
+        # in one forward pass (plus the reverse-mode AD).
+        loss, grads = value_and_grad_fn(gains)
+        
+        # Update gains
+        gains -= learning_rate * grads
+
+        # Now 'loss' is the pre-update loss, 
+        # but it came from exactly the same forward pass used to compute grads.
+        print(f"Iteration {i+1} - Loss: {loss:.6f} - Gains: {gains}")
+
+    print("\nOptimized PID gains:", gains)

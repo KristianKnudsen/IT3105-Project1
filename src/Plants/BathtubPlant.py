@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+import jax
  
 class BathtubPlant:
     """
@@ -32,7 +33,12 @@ class BathtubPlant:
         self.C = jnp.array(C)
 
     # returns new height
-    def step(self, H, U: float, D: float) -> jnp.ndarray:
-        vc = jnp.sqrt(19.6 * H) * self.C
+    def step(self, H, U, D):
+        # clamp to ensure forward pass doesn't see negative H
+        H_safe = jnp.maximum(H, 1e-8)
+        # add epsilon so derivative at zero is not infinite
+        vc = jnp.sqrt(19.6 * H_safe) * self.C
+            
         d_h = (U + D - vc) / self.A
-        return jnp.maximum(0, H + d_h)
+        H_new = H + d_h
+        return jnp.maximum(H_new, 1e-8)

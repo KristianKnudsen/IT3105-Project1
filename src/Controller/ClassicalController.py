@@ -1,9 +1,9 @@
 import jax.numpy as jnp
+import jax
 
 class ClassicalController:
     def __init__(self, gains):
         self.gains = jnp.array(gains)  # [K_p, K_i, K_d]
-        # Might want to switch to fixed size list if its slow
         self._error_history = jnp.array([]) 
 
     def _calc_proportional(self):
@@ -18,7 +18,11 @@ class ClassicalController:
         return self.gains[2] * (self._error_history[-1] - self._error_history[-2])
 
     def get_control_signal(self):
-        return self._calc_proportional() + self._calc_integral() + self._calc_derivative()
+        P = self._calc_proportional()
+        jax.debug.print("1: {K_p}", K_p=self.gains[0])
+        jax.debug.print("2: {K_p}", K_p=P)
+
+        return P + self._calc_integral() + self._calc_derivative()
 
     # Returns control signal Y
     def step(self, error_history, error):
