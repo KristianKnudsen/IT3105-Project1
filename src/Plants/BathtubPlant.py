@@ -1,7 +1,8 @@
 import jax.numpy as jnp
 import jax
+from Plants.PlantInterface import Plant
  
-class BathtubPlant:
+class BathtubPlant(Plant):
     """
         This is a simulation of a bathtub and its water height.
 
@@ -32,13 +33,17 @@ class BathtubPlant:
         self.A = jnp.array(A)
         self.C = jnp.array(C)
 
+    # Target height - actual height
+    def error(self, Y, T):
+        return T - Y
+
     # returns new height
-    def step(self, H, U, D):
-        # clamp to ensure forward pass doesn't see negative H
-        H_safe = jnp.maximum(H, 1e-8)
-        # add epsilon so derivative at zero is not infinite
+    def step(self, Y, U, D):
+        # The function is not differentiblabla at h=0, so we simulate replace with very low water level.
+        H_safe = jnp.maximum(Y, 1e-8)
         vc = jnp.sqrt(19.6 * H_safe) * self.C
             
         d_h = (U + D - vc) / self.A
-        H_new = H + d_h
+        H_new = Y + d_h
+        # While, returning a height of 0 at this might not cause an issue, it's best to be safe.
         return jnp.maximum(H_new, 1e-8)
