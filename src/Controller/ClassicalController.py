@@ -20,7 +20,7 @@ class ClassicalController:
     def get_control_signal(self):
         return self._calc_proportional() + self._calc_integral() + self._calc_derivative()
 
-    # Returns control signal Y
+    # Returns control signal U
     def step(self, error_history, error):
         # jax follows the functional paragim 
         self._error_history = jnp.concatenate([error_history, jnp.array([error])])

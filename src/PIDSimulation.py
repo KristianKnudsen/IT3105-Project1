@@ -1,12 +1,13 @@
 from Controller.ClassicalController import ClassicalController
 from Plants.BathtubPlant import BathtubPlant
 from Plants.PlantInterface import Plant
+from Plants.CournotPlant import CournotPlant
 import jax
 import jax.numpy as jnp
 import jax.random as jr
 
 class Consys:
-    def __init__(self, gains, plant: Plant, setpoint=0.5, time_steps=20, seed=0):
+    def __init__(self, gains, plant: Plant, setpoint, time_steps, seed=0):
         """
         Initializes the simulation with:
           gains: PID gains [K_p, K_i, K_d]
@@ -30,11 +31,11 @@ class Consys:
           - mse_loss (mean of squared errors)
         """
         error_history = jnp.array([])
-        Y = jnp.array(0.5)  # Initial water height
+        Y = jnp.array([0.0, 0.5])  # Initial water height
 
         for _ in range(self.time_steps):
             
-            error = self.plant.error(self.setpoint, Y)
+            error = self.plant.error(Y, self.setpoint)
             error_history, U = self.controller.step(error_history, error)
 
             # Random disturbance
@@ -51,33 +52,31 @@ def loss_fn(gains):
     Given PID gains, run the simulation and return the MSE loss.
     We'll differentiate this w.r.t. 'gains'.
     """
-    plant = BathtubPlant(A=0.15, C=0.15/100)
-    sim = Consys(gains, plant, setpoint=0.5, time_steps=10, seed=42)
+    plant = CournotPlant(p_max=2.0, c_m=0.1)
+    # plant = BathtubPlant(A=0.15, C=0.15/100)
+    sim = Consys(gains, plant, setpoint=0.3, time_steps=20, seed=42)
     mse_loss = sim.simulate()
     return mse_loss
 
 if __name__ == "__main__":
     # Hyperparameters
     learning_rate = 0.01  # Step size for gradient descent
-    num_iterations = 1000  # Number of optimization steps
+    num_iterations = 50  # Number of optimization steps
 
     # Initialize PID gains
-    gains = jnp.array([0.1, 0., 0.])
+    gains = jnp.array([0, 0, 0.])
 
     print(f"Initial gains: {gains}")
 
     value_and_grad_fn = jax.value_and_grad(loss_fn)
 
     for i in range(num_iterations):
-        # This single call returns both loss and gradients 
-        # in one forward pass (plus the reverse-mode AD).
         loss, grads = value_and_grad_fn(gains)
-        
         # Update gains
-        gains -= learning_rate * grads
+        print("grads", grads)
 
-        # Now 'loss' is the pre-update loss, 
-        # but it came from exactly the same forward pass used to compute grads.
+        gains -= learning_rate * grads
         print(f"Iteration {i+1} - Loss: {loss:.6f} - Gains: {gains}")
+        print(f"Iteration {i+1} - Loss: {loss:.6f} --------------------------")
 
     print("\nOptimized PID gains:", gains)
