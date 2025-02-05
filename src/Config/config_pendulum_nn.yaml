@@ -1,0 +1,27 @@
+plant:
+  module: "Plants.PendulumPlant"
+  class: "PendulumPlant"
+  params:
+    C_Drag: 0.5
+    Area: 0.1
+    mass: 1.0
+    Voltage: 12.0
+
+controller:
+  module: "Controller.NeuralController"
+  class: "NeuralController"
+  params:
+    layers: [12, 4, 2]
+    activations: ["relu", "sigmoid", "tanh", "none"]
+    init_range: [0.01, 0.025]
+
+simulation:
+  initial_state: 0.5
+  setpoint: 0.5
+  time_steps: 20
+  disturbance_range: [-0.01, 0.01]
+  seed: 1337
+
+training:
+  epochs: 20
+  learning_rate: 0.00001

@@ -1,0 +1,23 @@
+plant:
+  module: "Plants.BathtubPlant"
+  class: "BathtubPlant"
+  params:
+    C: 0.0015
+    A: 0.15
+
+controller:
+  module: "Controller.ClassicalController"
+  class: "ClassicalController"
+  params:
+    params: [0.0, 0.0, 0.0]
+
+simulation:
+  initial_state: 0.5
+  setpoint: 0.5
+  time_steps: 20
+  disturbance_range: [-0.01, 0.01]
+  seed: 1337
+
+training:
+  epochs: 20
+  learning_rate: 0.00005

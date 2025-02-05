@@ -1,0 +1,25 @@
+plant:
+  module: "Plants.BathtubPlant"
+  class: "BathtubPlant"
+  params:
+    C: 0.0015
+    A: 0.15
+
+controller:
+  module: "Controller.NeuralController"
+  class: "NeuralController"
+  params:
+    layers: [12, 4, 2]
+    activations: ["relu", "sigmoid", "tanh", "none"]
+    init_range: [0.01, 0.025]
+
+simulation:
+  initial_state: 0.5
+  setpoint: 0.5
+  time_steps: 20
+  disturbance_range: [-0.01, 0.01]
+  seed: 1337
+
+training:
+  epochs: 20
+  learning_rate: 0.00005

@@ -1,10 +1,19 @@
 import jax.numpy as jnp
-import jax
 from Plants.PlantInterface import Plant
  
 class PendulumPlant(Plant):
     def __init__(self, C_Drag, Area, mass, Voltage):
-
+        """
+        Arguments:
+        C_Drag : float
+            Drag coefficient of the pendulum.
+        Area : float
+            Cross-sectional area exposed to air.
+        mass : float
+            Mass of the pendulum.
+        Voltage : float
+            Voltage value used to convert current input to energy.
+        """
         # Density of air, we assume this is generally not subject to change
         p = 1.225
         self.C =  jnp.array( C_Drag * Area * p / 2 )
@@ -16,11 +25,18 @@ class PendulumPlant(Plant):
 
     def step(self, Y, U, D):
         """
-        Y: Current state
-        U: Controller Input, In this case amps
-        D: Disturbance, directly applied to the state
+        Arguments:
+        Y : jnp.array
+            The current energy state (E).
+        U : jnp.array
+            Controller input (in amps) contributing to energy increase.
+        D : jnp.array
+            Disturbance directly affecting the energy state.
+        
+        Returns:
+        jnp.array
+            The updated energy state, ensuring it remains above a minimal safe level (for differentiation).
         """
-
         v_max = jnp.sqrt(2 * Y / self.mass)
         v_avg = (2 / jnp.pi) * v_max
         d_E = self.C * v_avg**3

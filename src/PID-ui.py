@@ -1,34 +1,29 @@
+from Plants.PendulumPlant import PendulumPlant
+from Controller.NeuralController import NeuralController
 from Controller.ClassicalController import ClassicalController
 from Plants.BathtubPlant import BathtubPlant
+from Plants.CournotPlant import CournotPlant
+from Consys import Consys
 import jax.numpy as jnp
-import jax.random as jr
 
+if __name__ == "__main__":
+    # controller = ClassicalController(params=[0.0, 0.0, 0.0])
+    # controller = NeuralController(layers=[12, 4, 2], 
+    #                               activations=["relu", "sigmoid", "tanh", "none"],
+     #                              init_range=(0.01, 0.025))
 
-cc = ClassicalController([0.1, 0.01, 0.001])
+    # plant = BathtubPlant(C=0.0015, A=0.15)
+    # plant = CournotPlant(p_max=2.0, c_m=0.1)
+    # plant = PendulumPlant(C_Drag=0.5, Area=0.1, mass= 1.0, Voltage= 12.0)
 
-errors = [0.3, 0.2, 0.1, 0., 0., 0.]
+    sim = Consys(
+        controller=controller,
+        plant=plant,
+        initial_state=0.5,
+        setpoint=0.5,
+        time_steps=20,
+        disturbance_range=(-0.01, 0.01),
+        seed=1337
+    )
 
-H = 0.5   # Initial water height
-
-a = 0.15
-c = a/100
-
-bp = BathtubPlant(H, a, c)
-
-e = 0.
-
-key = jr.key(0)
-
-for _ in range(100):
-    print("---")
-    print("Error e")
-    print(e)
-    u = cc.step(e)
-    print("Controller output u", u)
-    key, subkey = jr.split(key)
-    D = jr.uniform(subkey, shape=(), minval=-0.01, maxval=0.01)  # Random D in [-0.01, 0.01]
-    h = bp.step(u, D=D)
-    print("new height", h)
-    e = 0.5-h
-
-cc.error_history
+    optimized_gains = sim.train(epochs=50, learning_rate=0.00005)
