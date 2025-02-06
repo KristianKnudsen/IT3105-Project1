@@ -35,7 +35,9 @@ if __name__ == "__main__":
         setpoint=config["simulation"]["setpoint"],
         time_steps=config["simulation"]["time_steps"],
         disturbance_range=tuple(config["simulation"]["disturbance_range"]),
-        seed=config["simulation"]["seed"]
+        seed=config["simulation"]["seed"],
+        vizualize_loss=config["vizualize"]["loss"],
+        vizualize_params=config["vizualize"]["params"]
     )
     
     optimized_gains = sim.train(

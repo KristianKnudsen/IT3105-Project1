@@ -23,3 +23,7 @@ simulation:
 training:
   epochs: 20
   learning_rate: 0.00005
+
+vizualize:
+  loss: True
+  params: ["K_p", "K_i", "K_d"]

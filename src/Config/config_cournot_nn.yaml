@@ -21,5 +21,9 @@ simulation:
   seed: 1337
 
 training:
-  epochs: 20
+  epochs: 10
   learning_rate: 0.005
+
+vizualize:
+  loss: True
+  params: False

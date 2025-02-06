@@ -15,9 +15,13 @@ simulation:
   initial_state: 0.5
   setpoint: 0.5
   time_steps: 20
-  disturbance_range: [-0.01, 0.01]
+  disturbance_range: [-0.001, 0.001]
   seed: 1337
 
 training:
   epochs: 20
   learning_rate: 0.00005
+
+vizualize:
+  loss: True
+  params: ["K_p", "K_i", "K_d"]

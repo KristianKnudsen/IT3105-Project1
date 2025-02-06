@@ -3,6 +3,7 @@ from Plants.PlantInterface import Plant
 import jax
 import jax.numpy as jnp
 import jax.random as jr
+import matplotlib.pyplot as plt
 
 class Consys:
     def __init__(
@@ -13,7 +14,9 @@ class Consys:
         setpoint,
         time_steps,
         disturbance_range,
-        seed=1337
+        seed,
+        vizualize_loss,
+        vizualize_params
     ):
         """
         Initializes the simulation with:
@@ -24,6 +27,9 @@ class Consys:
           - time_steps: number of simulation steps
           - disturbance_range: (min, max) range for random disturbances
           - seed: reproducibility and jax shenanigans
+          - loss_history: Initilizes an empty list to store loss values if True
+          - params_history: Initilizes an empty list to store parameter values if True
+          - param_names: List of parameter names for visualization
         """
         self.controller = controller
         self.plant = plant
@@ -32,6 +38,9 @@ class Consys:
         self.key = jr.PRNGKey(seed)  # JAX PRNG key
         self.disturbance_range = disturbance_range
         self.state = jnp.array(initial_state)
+        self.loss_history =  [] if vizualize_loss else None
+        self.params_history = [] if vizualize_params else None
+        self.param_names = vizualize_params
 
     def simulate(self):
         """
@@ -101,7 +110,47 @@ class Consys:
             loss, grads = value_and_grad_fn(params)
             params = jax.tree_map(lambda p, g: p - learning_rate*g, params, grads)
             print(f"Epoch: {i+1} | Loss: {loss:.6f}")
+            self.store_history(loss, params)
 
-        # Update final gains in the controller
+        self.plot()
         self.controller.params = params
         return params
+    
+    def store_history(self, loss, params):
+        """
+        Stores the loss and parameter history for vizualization.
+
+        Arguments:
+        loss : float
+            Current loss value.
+        params : jnp.array
+            Current controller parameters.
+        """
+        if self.loss_history is not None:
+            self.loss_history.append(loss)
+        if self.params_history is not None:
+            self.params_history.append(params)
+
+    def plot(self):
+        """
+        Plots the loss and parameter history.
+        """
+        if self.loss_history is not None:
+            plt.figure(f"Loss_{self.controller.__class__.__name__}_{self.plant.__class__.__name__}")
+            plt.plot(self.loss_history)
+            plt.xlabel("Epoch")
+            plt.ylabel("Loss")
+            plt.title("Loss history")
+            plt.show()
+
+        if self.params_history is not None:
+            plt.figure(f"Params_{self.controller.__class__.__name__}_{self.plant.__class__.__name__}")
+            params_history = jnp.stack(self.params_history)
+            for i in range(params_history.shape[1]):
+                plt.plot(params_history[:, i], label=self.param_names[i])
+            plt.xlabel("Epoch")
+            plt.ylabel("Parameter value")
+            plt.legend(loc="upper left")
+            plt.title("Parameter history")
+            plt.show()
+        
